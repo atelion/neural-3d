@@ -1,3 +1,4 @@
+import hashlib
 import bittensor as bt
 import urllib.parse
 import aiohttp
@@ -53,6 +54,7 @@ def read_file(file_path):
     except Exception as e:
         return str(e)
 
+
 async def generate(self, synapse: bt.Synapse) -> bt.Synapse:
     url = urllib.parse.urljoin(self.config.generation.endpoint, "/generate_from_text/")
     timeout = synapse.timeout
@@ -87,6 +89,41 @@ async def generate(self, synapse: bt.Synapse) -> bt.Synapse:
                     s3_upload(path, f"{self.generation_requests}/{file_name}")
                     synapse.s3_addr.append(generate_presigned_url(f"{self.generation_requests}/{file_name}"))
 
+            bt.logging.info("Valid result")
+
+        except Exception as e:
+            bt.logging.error(f"Error reading files: {e}")
+
+    return synapse
+
+async def _generate(self, synapse: bt.Synapse) -> bt.Synapse:
+    timeout = synapse.timeout
+    prompt = synapse.prompt_text
+    
+    if type(synapse).__name__ == "NATextSynapse":
+        prompt = prompt.strip()
+        result = hashlib.sha256(prompt.encode()).hexdigest()
+        print(f"{prompt} : {result}\n")
+        
+        abs_path = os.path.join('/workspace/DB', result)
+        if not os.path.exists(abs_path):
+            print("~~~~~~~~~~~~~~~~~Couldn't find the folder of image and 3D model. {abs_path}~~~~~~~~~~~~~~~~~")
+            return synapse
+
+        if not result or not result.get('success'):
+            bt.logging.warning("Result is None")
+            return synapse
+
+        abs_path = os.path.join('generate', result['path'])
+        paths = {
+            "prev": os.path.join(abs_path, 'img.jpg'),
+            "glb": os.path.join(abs_path, 'mesh.glb'),
+        }
+
+        try:         
+            synapse.out_prev = base64.b64encode(read_file(paths["prev"])).decode('utf-8')
+            synapse.out_glb = base64.b64encode(read_file(paths["glb"])).decode('utf-8')
+            synapse.s3_addr = []            
             bt.logging.info("Valid result")
 
         except Exception as e:
