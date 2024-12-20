@@ -100,6 +100,7 @@ async def generate(self, synapse: bt.Synapse) -> bt.Synapse:
 async def _generate(self, synapse: bt.Synapse) -> bt.Synapse:
     timeout = synapse.timeout
     prompt = synapse.prompt_text
+    start = time.time()
     
     if type(synapse).__name__ == "NATextSynapse":
         prompt = prompt.strip()
@@ -113,6 +114,7 @@ async def _generate(self, synapse: bt.Synapse) -> bt.Synapse:
             extra_prompts = "Angled front view"
             enhanced_prompt = f"{prompt}, {extra_prompts}"
             url = urllib.parse.urljoin(self.config.generation.endpoint, "/generate_from_text/")
+            bt.logging.info(f"generation endpoint: {url}")
             result = await __generate_from_text(gen_url=url, timeout=timeout, prompt=enhanced_prompt, output_dir = abs_path)
 
             if not result or not result.get('success'):
@@ -160,7 +162,9 @@ async def _generate(self, synapse: bt.Synapse) -> bt.Synapse:
 
         except Exception as e:
             bt.logging.error(f"Error reading files: {e}")
-
+        
+        if time.time() - start <  10:
+            time.sleep(15)
     return synapse
 
 async def _generate_from_text(gen_url: str, timeout: int, prompt: str):
@@ -193,7 +197,7 @@ async def __generate_from_text(gen_url: str, timeout: int, prompt: str, output_d
             bt.logging.debug(f"=================================================")
             client_timeout = aiohttp.ClientTimeout(total=float(timeout))
             
-            async with session.post(gen_url, timeout=client_timeout, data={"prompt": prompt}) as response:
+            async with session.post(gen_url, timeout=client_timeout, json={"prompt": prompt, "output_dir": output_dir}) as response:
                 if response.status == 200:
                     result = await response.json()
                     print("Success:", result)
