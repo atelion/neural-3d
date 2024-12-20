@@ -126,7 +126,7 @@ async def _generate(self, synapse: bt.Synapse) -> bt.Synapse:
             try:                
                 extra_db_path = '/workspace/DB_Extra'
                 os.makedirs(extra_db_path, exist_ok=True)
-                shutil.move(abs_path, os.path.join(extra_db_path, hash_folder_name))
+                shutil.copytree(abs_path, os.path.join(extra_db_path, hash_folder_name))
 
 
             except:
