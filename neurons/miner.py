@@ -7,7 +7,7 @@ import bittensor as bt
 # import base miner class which takes care of most of the boilerplate
 from neuralai.base.miner import BaseMinerNeuron
 from neuralai.protocol import NATextSynapse, NAImageSynapse, NAStatus
-from neuralai.miner.utils import set_status, check_status, generate, check_validator
+from neuralai.miner.utils import set_status, check_status, generate, check_validator, _generate
 
 class Miner(BaseMinerNeuron):
     
@@ -38,7 +38,7 @@ class Miner(BaseMinerNeuron):
         set_status(self, "generation")
         # Send gpu id as a parameter for multi gpu
         start = time.time()
-        synapse = await generate(self, synapse)
+        synapse = await _generate(self, synapse)
         
         self.generation_requests -= 1
         if self.generation_requests < self.config.miner.concurrent_limit:
