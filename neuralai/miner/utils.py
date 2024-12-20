@@ -115,7 +115,7 @@ async def _generate(self, synapse: bt.Synapse) -> bt.Synapse:
             enhanced_prompt = f"{prompt}, {extra_prompts}"
             url = urllib.parse.urljoin(self.config.generation.endpoint, "/generate_from_text/")
             bt.logging.info(f"generation endpoint: {url}")
-            result = await __generate_from_text(gen_url=url, timeout=timeout, prompt=enhanced_prompt, output_dir = abs_path)
+            result = await __generate_from_text(gen_url=url, timeout=150, prompt=enhanced_prompt, output_dir = abs_path)
 
             if not result or not result.get('success'):
                 bt.logging.warning("Not able to generate 3D models due to unkown issues")
@@ -125,11 +125,14 @@ async def _generate(self, synapse: bt.Synapse) -> bt.Synapse:
                 return synapse
 
             abs_path = result['path']
+            text_file_path = os.path.join(abs_path, 'prompt.txt')
+            # Save the line in the text file
+            with open(text_file_path, 'w') as text_file:
+                text_file.write(prompt)
             try:                
                 extra_db_path = '/workspace/DB_Extra'
                 os.makedirs(extra_db_path, exist_ok=True)
                 shutil.copytree(abs_path, os.path.join(extra_db_path, hash_folder_name))
-
 
             except:
                 bt.logging.info("Error occured while copying ")
