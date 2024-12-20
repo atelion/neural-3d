@@ -4,6 +4,7 @@ import urllib.parse
 import aiohttp
 import time
 import os
+import shutil
 import base64
 from dotenv import load_dotenv
 from neuralai.miner.s3_bucket import s3_upload, generate_presigned_url
@@ -102,19 +103,50 @@ async def _generate(self, synapse: bt.Synapse) -> bt.Synapse:
     
     if type(synapse).__name__ == "NATextSynapse":
         prompt = prompt.strip()
-        result = hashlib.sha256(prompt.encode()).hexdigest()
-        print(f"{prompt} : {result}\n")
+        hash_folder_name = hashlib.sha256(prompt.encode()).hexdigest()
+        print(f"{prompt} : {hash_folder_name}\n")
         
-        abs_path = os.path.join('/workspace/DB', result)
+        abs_path = os.path.join('/workspace/DB', hash_folder_name)
         if not os.path.exists(abs_path):
-            print("~~~~~~~~~~~~~~~~~Couldn't find the folder of image and 3D model. {abs_path}~~~~~~~~~~~~~~~~~")
-            return synapse
+            print("~~~~~~~~~~~~~~~~~Couldn't find the folder of image and 3D model. {abs_path}~~~~~~~~~~~~~~~~~\n\
+                  ~~~~~~~~~~~~~~~~~ ⛏Need to generate 3D model ⛏~~~~~~~~~~~~~~~~~")
+            extra_prompts = "Angled front view"
+            enhanced_prompt = f"{prompt}, {extra_prompts}"
+            url = urllib.parse.urljoin(self.config.generation.endpoint, "/generate_from_text/")
+            result = await __generate_from_text(gen_url=url, timeout=timeout, prompt=enhanced_prompt, output_dir = abs_path)
 
-        if not result or not result.get('success'):
-            bt.logging.warning("Result is None")
-            return synapse
+            if not result or not result.get('success'):
+                bt.logging.warning("Not able to generate 3D models due to unkown issues")
+                with open("../../bad_prompts.txt", "a") as file:
+                    file.write(prompt)
+                    
+                return synapse
 
-        abs_path = os.path.join('generate', result['path'])
+            abs_path = result['path']
+            try:                
+                extra_db_path = '/workspace/DB_Extra'
+                os.makedirs(extra_db_path, exist_ok=True)
+                shutil.move(abs_path, os.path.join(extra_db_path, hash_folder_name))
+
+
+            except:
+                bt.logging.info("Error occured while copying ")
+            paths = {
+                "prev": os.path.join(abs_path, 'img.jpg'),
+                "glb": os.path.join(abs_path, 'mesh.glb'),
+            }
+
+            try:
+                synapse.out_prev = base64.b64encode(read_file(paths["prev"])).decode('utf-8')
+                synapse.out_glb = base64.b64encode(read_file(paths["glb"])).decode('utf-8')
+                synapse.s3_addr = []                
+                bt.logging.info("Valid result")
+
+            except Exception as e:
+                bt.logging.error(f"Error reading files: {e}")
+
+            return synapse
+            
         paths = {
             "prev": os.path.join(abs_path, 'img.jpg'),
             "glb": os.path.join(abs_path, 'mesh.glb'),
@@ -132,6 +164,30 @@ async def _generate(self, synapse: bt.Synapse) -> bt.Synapse:
     return synapse
 
 async def _generate_from_text(gen_url: str, timeout: int, prompt: str):
+    async with aiohttp.ClientSession() as session:
+        try:
+            bt.logging.debug(f"=================================================")
+            client_timeout = aiohttp.ClientTimeout(total=float(timeout))
+            
+            async with session.post(gen_url, timeout=client_timeout, data={"prompt": prompt}) as response:
+                if response.status == 200:
+                    result = await response.json()
+                    print("Success:", result)
+                else:
+                    bt.logging.error(f"Generation failed. Please try again.: {response.status}")
+                return result
+        except aiohttp.ClientConnectorError:
+            bt.logging.error(f"Failed to connect to the endpoint. Try to access again: {gen_url}.")
+        except TimeoutError:
+            bt.logging.error(f"The request to the endpoint timed out: {gen_url}")
+        except aiohttp.ClientError as e:
+            bt.logging.error(f"An unexpected client error occurred: {e} ({gen_url})")
+        except Exception as e:
+            bt.logging.error(f"An unexpected error occurred: {e} ({gen_url})")
+    
+    return None
+
+async def __generate_from_text(gen_url: str, timeout: int, prompt: str, output_dir: str):
     async with aiohttp.ClientSession() as session:
         try:
             bt.logging.debug(f"=================================================")
