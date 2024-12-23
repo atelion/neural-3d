@@ -111,7 +111,7 @@ async def _generate(self, synapse: bt.Synapse) -> bt.Synapse:
         if not os.path.exists(abs_path):
             print("~~~~~~~~~~~~~~~~~Couldn't find the folder of image and 3D model. {abs_path}~~~~~~~~~~~~~~~~~\n\
                   ~~~~~~~~~~~~~~~~~ ⛏Need to generate 3D model ⛏~~~~~~~~~~~~~~~~~")
-            extra_prompts = "Angled front view"
+            extra_prompts = "Angled front view, solid color background, 3d model"
             enhanced_prompt = f"{prompt}, {extra_prompts}"
             url = urllib.parse.urljoin(self.config.generation.endpoint, "/generate_from_text/")
             bt.logging.info(f"generation endpoint: {url}")
@@ -167,7 +167,7 @@ async def _generate(self, synapse: bt.Synapse) -> bt.Synapse:
             bt.logging.error(f"Error reading files: {e}")
         
         if time.time() - start <  10:
-            time.sleep(15)
+            time.sleep(30)
     return synapse
 
 async def _generate_from_text(gen_url: str, timeout: int, prompt: str):
