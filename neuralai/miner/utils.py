@@ -110,17 +110,17 @@ async def _generate(self, synapse: bt.Synapse) -> bt.Synapse:
         abs_path = os.path.join('/workspace/DB', hash_folder_name)
         if not os.path.exists(abs_path):
             print("~~~~~~~~~~~~~~~~~Couldn't find the folder of image and 3D model. {abs_path}~~~~~~~~~~~~~~~~~\n\
-                  ~~~~~~~~~~~~~~~~~ ⛏Need to generate 3D model ⛏~~~~~~~~~~~~~~~~~")
+                  ~~~~~~~~~~~~~~~~~~⛏Need to generate 3D model ⛏~~~~~~~~~~~~~~~~~")
             extra_prompts = "Angled front view, solid color background, 3d model"
             enhanced_prompt = f"{prompt}, {extra_prompts}"
             url = urllib.parse.urljoin(self.config.generation.endpoint, "/generate_from_text/")
             bt.logging.info(f"generation endpoint: {url}")
-            result = await __generate_from_text(gen_url=url, timeout=150, prompt=enhanced_prompt, output_dir = abs_path)
+            result = await __generate_from_text(gen_url=url, timeout=170, prompt=enhanced_prompt, output_dir = abs_path)
 
             if not result or not result.get('success'):
                 bt.logging.warning("Not able to generate 3D models due to unkown issues")
                 with open("../../bad_prompts.txt", "a") as file:
-                    file.write(prompt)
+                    file.write(f"{prompt}\n")
                     
                 return synapse
 
