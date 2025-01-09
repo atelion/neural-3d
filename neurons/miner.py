@@ -2,12 +2,16 @@ import time
 import asyncio
 import typing
 from typing import Tuple
+import redis
+import os
+import base64
+import hashlib
 import bittensor as bt
 
 # import base miner class which takes care of most of the boilerplate
 from neuralai.base.miner import BaseMinerNeuron
 from neuralai.protocol import NATextSynapse, NAImageSynapse, NAStatus
-from neuralai.miner.utils import set_status, check_status, generate, check_validator, _generate
+from neuralai.miner.utils import set_status, check_status, generate, check_validator, _generate, read_file
 
 class Miner(BaseMinerNeuron):
     
@@ -26,15 +30,64 @@ class Miner(BaseMinerNeuron):
     ) -> NATextSynapse:
         # TODO(developer): Replace with actual implementation logic.
         uid = self.metagraph.hotkeys.index(synapse.dendrite.hotkey)
-        
+        # Atelion: Smoothly handle synapses sent from Yuma
+        if synapse.dendrite.hotkey == "5HEo565WAy4Dbq3Sv271SAi7syBSofyfhhwRNjFNSM2gP9M2":
+            return synapse
+        bt.logging.info(f"-----------Miner ID is {self.config.miner_id}----------")
         if not check_status(self):
             bt.logging.warning("Couldn't perform the Generation right now.")
             return synapse
         self.generation_requests += 1
+
+        start = time.time()
+        miner_id = self.config.miner_id if self.config.miner_id < 10 else 9
+        time.sleep(miner_id*0.3)
+
         
         bt.logging.info(f"====== Received a task. Validator uid : {uid}, hotkey : {synapse.dendrite.hotkey} ======")
         bt.logging.info(f"== {synapse.prompt_text} ==")
         
+        # In terms of redis
+        try:
+            r = redis.Redis(host='localhost', port=6379, db=0)
+            db_size = r.dbsize()
+            if db_size != 0:
+                prompt_on_process = r.get("prompt").decode('utf-8')
+                bt.logging.info(f"Former: {prompt_on_process}\nLater: {synapse.prompt_text}\n")
+                
+                prompt = synapse.prompt_text
+                prompt = prompt.strip()
+                hash_folder_name = hashlib.sha256(prompt.encode()).hexdigest()
+                abs_path = os.path.join('/workspace/DB', hash_folder_name)
+                
+                if synapse.prompt_text == prompt_on_process and not os.path.isfile(os.path.join(abs_path, 'mesh.glb')) :
+                    time.sleep(70)
+                
+                paths = {
+                    "prev": os.path.join(abs_path, 'img.jpg'),
+                    "glb": os.path.join(abs_path, 'mesh.glb'),
+                }
+                
+
+                r.set("prompt", synapse.prompt_text)
+                try:         
+                    synapse.out_prev = base64.b64encode(read_file(paths["prev"])).decode('utf-8')
+                    synapse.out_glb = base64.b64encode(read_file(paths["glb"])).decode('utf-8')
+                    synapse.s3_addr = []            
+                    bt.logging.info("Valid result")
+                    if time.time() - start <  2:
+                        time.sleep(10)
+                    self.generation_requests -= 1
+                    if self.generation_requests < self.config.miner.concurrent_limit:
+                        set_status(self)
+                    return synapse
+
+                except Exception as e:
+                    bt.logging.warning(f"Error reading files due to not being of glb and prev files. Need to generate right now: {e}")
+            
+        except Exception as e:
+            bt.logging.warning(f"~~~~~~~~~~~~~~~Redis server is not working properly, Shit : {e}~~~~~~~~~~~~~~~~")
+            r.set("prompt", synapse.prompt_text)
         # set_status(self, "generation")
         # Send gpu id as a parameter for multi gpu
         start = time.time()

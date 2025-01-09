@@ -70,7 +70,7 @@ class BaseNeuron(ABC):
 
         # If a gpu is required, set the device to cuda:N (e.g. cuda:0)
         self.device = self.config.neuron.device
-
+        self.miner_id = self.config.miner.id
         # Log the configuration for reference.
         bt.logging.info(self.config)
 

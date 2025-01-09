@@ -110,6 +110,13 @@ def add_args(cls, parser):
 
 def add_miner_args(cls, parser):
     """Add miner specific arguments to the parser."""
+    
+    parser.add_argument(
+        "--miner_id",
+        type=int,
+        help="ID used for setting sleep seconds, hahaha",
+        default=0,
+    )
 
     parser.add_argument(
         "--neuron.name",
