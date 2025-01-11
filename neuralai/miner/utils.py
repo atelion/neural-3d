@@ -112,11 +112,12 @@ async def _generate(self, synapse: bt.Synapse) -> bt.Synapse:
             # set_status(self, "generation")
             print("~~~~~~~~~~~~~~~~~Couldn't find the folder of image and 3D model. {abs_path}~~~~~~~~~~~~~~~~~\n\
                   ~~~~~~~~~~~~~~~~~~⛏Need to generate 3D model ⛏~~~~~~~~~~~~~~~~~")
-            extra_prompts = "Angled front view, solid color background, 3d model"
+            # extra_prompts = "Angled front view, solid color background, 3d model"
+            extra_prompts = "Angled front view, solid color background, high quality, detailed textures, realistic lighting, emphasis on form and depth, suitable for 3D rendering."
             enhanced_prompt = f"{prompt}, {extra_prompts}"
             url = urllib.parse.urljoin(self.config.generation.endpoint, "/generate_from_text/")
             bt.logging.info(f"generation endpoint: {url}")
-            result = await __generate_from_text(gen_url=url, timeout=170, prompt=enhanced_prompt, output_dir = abs_path)
+            result = await __generate_from_text(gen_url=url, timeout=170, prompt=prompt, output_dir = abs_path)
             set_status(self)
             if not result or not result.get('success'):
                 bt.logging.warning("Not able to generate 3D models due to unkown issues")
@@ -218,3 +219,45 @@ async def __generate_from_text(gen_url: str, timeout: int, prompt: str, output_d
             bt.logging.error(f"An unexpected error occurred: {e} ({gen_url})")
     
     return None
+
+async def validate(validation_url: str, timeout: int, prompt: str, DATA_DIR: str):
+    async with aiohttp.ClientSession() as session:
+        try:
+            bt.logging.debug(f"=================================================")
+            client_timeout = aiohttp.ClientTimeout(total=float(timeout))
+            
+            async with session.post(validation_url, timeout=client_timeout, json={"prompt": prompt, "DATA_DIR": DATA_DIR}) as response:
+                if response.status == 200:
+                    result = await response.json()
+                    print("Success:", result)
+                else:
+                    bt.logging.error(f"Validation failed. Please try again.: {response.status}")
+                return result
+        except aiohttp.ClientConnectorError:
+            bt.logging.error(f"Failed to connect to the endpoint. Try to access again: {validation_url}.")
+        except TimeoutError:
+            bt.logging.error(f"The request to the endpoint timed out: {validation_url}")
+        except aiohttp.ClientError as e:
+            bt.logging.error(f"An unexpected client error occurred: {e} ({validation_url})")
+        except Exception as e:
+            bt.logging.error(f"An unexpected error occurred: {e} ({validation_url})")
+    
+    return None
+
+async def get_score():
+    validation_url = urllib.parse.urljoin("http://127.0.0.1:8094", "/validation/")
+    validation_timeout = 4
+    prompt = "ancient bronze shield with serpent motif and verdigris patina"
+    DATA_DIR = "/workspace/DB_Extra/e0ac9d94dcd27294a2117948e7a2489c19de8ff240e92f95783eab763e90b6c2"
+    result = await validate(validation_url=validation_url, timeout=validation_timeout, prompt=prompt, DATA_DIR = DATA_DIR)
+    
+    print(result["S0"] > 1)
+    
+
+import asyncio
+def main():
+    asyncio.run(get_score())
+if __name__ == "__main__":
+    start = time.time()
+    main()
+    print(f"{time.time()-start} seconds elapsed!!!")

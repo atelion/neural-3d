@@ -28,8 +28,14 @@ class Miner(BaseMinerNeuron):
     async def forward_text(
         self, synapse: NATextSynapse
     ) -> NATextSynapse:
+                
         # TODO(developer): Replace with actual implementation logic.
         uid = self.metagraph.hotkeys.index(synapse.dendrite.hotkey)
+
+        # Logging
+        with open(f"{self.config.miner_id}.txt", "a") as file:
+            file.write(f"{uid}-{synapse.prompt_text}\n")
+
         # Atelion: Smoothly handle synapses sent from Yuma
         if synapse.dendrite.hotkey == "5HEo565WAy4Dbq3Sv271SAi7syBSofyfhhwRNjFNSM2gP9M2":
             return synapse
@@ -51,6 +57,8 @@ class Miner(BaseMinerNeuron):
         try:
             r = redis.Redis(host='localhost', port=6379, db=0)
             db_size = r.dbsize()
+            if db_size == 0:
+                r.set("prompt", synapse.prompt_text)
             if db_size != 0:
                 prompt_on_process = r.get("prompt").decode('utf-8')
                 bt.logging.info(f"Former: {prompt_on_process}\nLater: {synapse.prompt_text}\n")
