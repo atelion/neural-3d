@@ -47,7 +47,7 @@ class Miner(BaseMinerNeuron):
 
         start = time.time()
         miner_id = self.config.miner_id if self.config.miner_id < 10 else 9
-        time.sleep(miner_id*0.3)
+        time.sleep(miner_id*0.1)
 
         
         bt.logging.info(f"====== Received a task. Validator uid : {uid}, hotkey : {synapse.dendrite.hotkey} ======")

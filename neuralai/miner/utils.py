@@ -97,6 +97,7 @@ async def generate(self, synapse: bt.Synapse) -> bt.Synapse:
 
     return synapse
 
+
 async def _generate(self, synapse: bt.Synapse) -> bt.Synapse:
     timeout = synapse.timeout
     prompt = synapse.prompt_text
@@ -113,11 +114,20 @@ async def _generate(self, synapse: bt.Synapse) -> bt.Synapse:
             print("~~~~~~~~~~~~~~~~~Couldn't find the folder of image and 3D model. {abs_path}~~~~~~~~~~~~~~~~~\n\
                   ~~~~~~~~~~~~~~~~~~⛏Need to generate 3D model ⛏~~~~~~~~~~~~~~~~~")
             # extra_prompts = "Angled front view, solid color background, 3d model"
-            extra_prompts = "Angled front view, solid color background, high quality, detailed textures, realistic lighting, emphasis on form and depth, suitable for 3D rendering."
+            extra_prompts = "Angled front view, solid color background, high quality, detailed textures, realistic lighting, suitable for 3D rendering."
             enhanced_prompt = f"{prompt}, {extra_prompts}"
+            image_endpoint = "http://127.0.0.1:8095"
+            image_url = urllib.parse.urljoin(image_endpoint, "/image_generation/")
+            bt.logging.info(f"Image generation endpoint: {image_url}")
+            result = await generate_image_from_text(gen_url=image_url, timeout=70, prompt=enhanced_prompt, output_dir = abs_path)
+            
+            if not result or not result.get('success'):
+                bt.logging.warning("Not able to generate image from text using sdxl due to unkown issues")
+                return synapse
+            
             url = urllib.parse.urljoin(self.config.generation.endpoint, "/generate_from_text/")
-            bt.logging.info(f"generation endpoint: {url}")
-            result = await __generate_from_text(gen_url=url, timeout=170, prompt=prompt, output_dir = abs_path)
+            bt.logging.info(f"3D model generation endpoint: {url}")
+            result = await generate_from_image(gen_url=url, timeout=170, output_dir = abs_path)
             set_status(self)
             if not result or not result.get('success'):
                 bt.logging.warning("Not able to generate 3D models due to unkown issues")
@@ -172,6 +182,30 @@ async def _generate(self, synapse: bt.Synapse) -> bt.Synapse:
             time.sleep(10)
     return synapse
 
+async def generate_image_from_text(gen_url: str, timeout: int, prompt: str, output_dir: str):
+    async with aiohttp.ClientSession() as session:
+        try:
+            bt.logging.debug(f"=================================================")
+            client_timeout = aiohttp.ClientTimeout(total=float(timeout))
+            
+            async with session.post(gen_url, timeout=client_timeout, json={"prompt": prompt, "output_dir": output_dir}) as response:
+                if response.status == 200:
+                    result = await response.json()
+                    print("Success:", result)
+                else:
+                    bt.logging.error(f"Image generation failed. Please try again.: {response.status}")
+                return result
+        except aiohttp.ClientConnectorError:
+            bt.logging.error(f"Failed to connect to the endpoint. Try to access again: {gen_url}.")
+        except TimeoutError:
+            bt.logging.error(f"The request to the endpoint timed out: {gen_url}")
+        except aiohttp.ClientError as e:
+            bt.logging.error(f"An unexpected client error occurred: {e} ({gen_url})")
+        except Exception as e:
+            bt.logging.error(f"An unexpected error occurred: {e} ({gen_url})")
+    
+    return None
+
 async def _generate_from_text(gen_url: str, timeout: int, prompt: str):
     async with aiohttp.ClientSession() as session:
         try:
@@ -219,6 +253,31 @@ async def __generate_from_text(gen_url: str, timeout: int, prompt: str, output_d
             bt.logging.error(f"An unexpected error occurred: {e} ({gen_url})")
     
     return None
+
+async def generate_from_image(gen_url: str, timeout: int, output_dir: str):
+    async with aiohttp.ClientSession() as session:
+        try:
+            bt.logging.debug(f"=================================================")
+            client_timeout = aiohttp.ClientTimeout(total=float(timeout))
+            
+            async with session.post(gen_url, timeout=client_timeout, data={"output_dir": output_dir}) as response:
+                if response.status == 200:
+                    result = await response.json()
+                    print("Success:", result)
+                else:
+                    bt.logging.error(f"Generation failed. Please try again.: {response.status}")
+                return result
+        except aiohttp.ClientConnectorError:
+            bt.logging.error(f"Failed to connect to the endpoint. Try to access again: {gen_url}.")
+        except TimeoutError:
+            bt.logging.error(f"The request to the endpoint timed out: {gen_url}")
+        except aiohttp.ClientError as e:
+            bt.logging.error(f"An unexpected client error occurred: {e} ({gen_url})")
+        except Exception as e:
+            bt.logging.error(f"An unexpected error occurred: {e} ({gen_url})")
+    
+    return None
+
 
 async def validate(validation_url: str, timeout: int, prompt: str, DATA_DIR: str):
     async with aiohttp.ClientSession() as session:
