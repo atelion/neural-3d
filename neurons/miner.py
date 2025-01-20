@@ -62,14 +62,18 @@ class Miner(BaseMinerNeuron):
                 db_size += 1
             if db_size != 0:
                 prompt_on_process = r.get("prompt").decode('utf-8')
-                bt.logging.info(f"Former: {prompt_on_process}\nLater: {synapse.prompt_text}\n")
+                bt.logging.info(f"Former: {prompt_on_process}")
+                bt.logging.info(f"Later: {synapse.prompt_text}")
                 
                 prompt = synapse.prompt_text
                 prompt = prompt.strip()
                 hash_folder_name = hashlib.sha256(prompt.encode()).hexdigest()
                 abs_path = os.path.join('/workspace/DB', hash_folder_name)
                 
+                # Flag to check if it should be waited for 70 seconds.
+                flag_wait_for_70 = False
                 if synapse.prompt_text == prompt_on_process and not os.path.isfile(os.path.join(abs_path, 'mesh.glb')) :
+                    flag_wait_for_70 = True
                     time.sleep(70)
                 
                 paths = {
@@ -77,15 +81,16 @@ class Miner(BaseMinerNeuron):
                     "glb": os.path.join(abs_path, 'mesh.glb'),
                 }
                 
-
-                r.set("prompt", synapse.prompt_text)
+                if flag_wait_for_70 == False:
+                    r.set("prompt", synapse.prompt_text)
+                    
                 try:         
                     synapse.out_prev = base64.b64encode(read_file(paths["prev"])).decode('utf-8')
                     synapse.out_glb = base64.b64encode(read_file(paths["glb"])).decode('utf-8')
                     synapse.s3_addr = []            
                     bt.logging.info("Valid result")
-                    if time.time() - start <  2:
-                        time.sleep(10)
+                    # if time.time() - start <  2:
+                    #     time.sleep(10)
                     self.generation_requests -= 1
                     if self.generation_requests < self.config.miner.concurrent_limit:
                         set_status(self)
