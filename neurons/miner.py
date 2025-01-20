@@ -59,6 +59,7 @@ class Miner(BaseMinerNeuron):
             db_size = r.dbsize()
             if db_size == 0:
                 r.set("prompt", synapse.prompt_text)
+                db_size += 1
             if db_size != 0:
                 prompt_on_process = r.get("prompt").decode('utf-8')
                 bt.logging.info(f"Former: {prompt_on_process}\nLater: {synapse.prompt_text}\n")
