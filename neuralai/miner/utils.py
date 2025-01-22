@@ -120,15 +120,45 @@ async def _generate(self, synapse: bt.Synapse) -> bt.Synapse:
 
             # Image Generation config
             image_endpoint = "http://127.0.0.1:8095"
-            image_url = urllib.parse.urljoin(image_endpoint, "/image_generation/")
+            image_url = urllib.parse.urljoin(image_endpoint, "/text2image/")
             bt.logging.info(f"Image generation endpoint: {image_url}")
-            result = await generate_image_from_text(gen_url=image_url, timeout=70, prompt=enhanced_prompt, output_dir = abs_path)
             
+            Extra_prompts = [
+                "solid color background, 3D model"    
+                "Angled front view, solid color background, 3d model, high quality",
+                "Angled front view, solid color background, detailed sub-components, suitable for 3D rendering, include relevant complementary objects (e.g., a stand for the clock, a decorative base for the sword) linked to the main object to create context and depth.",
+            ]
+            # Stage 1: Text to Image
+            start = time.time()
+            flag = False
+            S0 = 0
+            for extra_prompt in Extra_prompts:
+                enhanced_prompt = f"{prompt}, {extra_prompt}"
+                bt.logging.info(enhanced_prompt)
+                result = await generate_image_from_text(gen_url=image_url, timeout=70, prompt=enhanced_prompt, output_dir = abs_path)    
+                validation_url = urllib.parse.urljoin("http://127.0.0.1:8094", "/image_validation/")
+                validation_timeout = 40
+                try:
+                    result = await validate(validation_url=validation_url, timeout=validation_timeout, prompt=prompt, DATA_DIR=abs_path)
+                    S0 = result
+                    print("----------validation is ended-----------")
+                    if S0 > 0.23:
+                        flag = True
+                        break
+                    bt.logging.info(f"The image score is {S0}")
+                except:
+                    print("Failed in validation, hehehe")
+            if flag == False:
+                # Logging
+                with open(f"/workspace/GenDB-3D/shit_prompts_for_juggernautxl.txt", "a") as file:
+                    file.write(f"{prompt}=={S0}\n")
+            
+                    
             if not result or not result.get('success'):
                 bt.logging.warning("Not able to generate image from text using sdxl due to unkown issues")
                 return synapse
             
-            url = urllib.parse.urljoin(self.config.generation.endpoint, "/generate_from_text/")
+            url = urllib.parse.urljoin(self.config.generation.endpoint, "/juggernautxl_to_3d/")
             bt.logging.info(f"3D model generation endpoint: {url}")
             result = await generate_from_image(gen_url=url, timeout=170, output_dir = abs_path)
             set_status(self)
