@@ -121,10 +121,12 @@ async def _generate(self, synapse: bt.Synapse) -> bt.Synapse:
             # Image Generation config
             image_endpoint = "http://127.0.0.1:8095"
             image_url = urllib.parse.urljoin(image_endpoint, "/text2image/")
+            image_generation_timeout = 25
             bt.logging.info(f"Image generation endpoint: {image_url}")
             
             Extra_prompts = [
-                "solid color background, 3D model"    
+                "solid color background, 3D model"
+                "",
                 "Angled front view, solid color background, 3d model, high quality",
                 "Angled front view, solid color background, detailed sub-components, suitable for 3D rendering, include relevant complementary objects (e.g., a stand for the clock, a decorative base for the sword) linked to the main object to create context and depth.",
             ]
@@ -135,7 +137,7 @@ async def _generate(self, synapse: bt.Synapse) -> bt.Synapse:
             for extra_prompt in Extra_prompts:
                 enhanced_prompt = f"{prompt}, {extra_prompt}"
                 bt.logging.info(enhanced_prompt)
-                result = await generate_image_from_text(gen_url=image_url, timeout=70, prompt=enhanced_prompt, output_dir = abs_path)    
+                result = await generate_image_from_text(gen_url=image_url, timeout=image_generation_timeout, prompt=enhanced_prompt, output_dir = abs_path)    
                 validation_url = urllib.parse.urljoin("http://127.0.0.1:8094", "/image_validation/")
                 validation_timeout = 40
                 try:
