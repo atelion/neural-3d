@@ -111,11 +111,14 @@ async def _generate(self, synapse: bt.Synapse) -> bt.Synapse:
         abs_path = os.path.join('/workspace/DB', hash_folder_name)
         if not os.path.exists(abs_path):
             # set_status(self, "generation")
-            print("~~~~~~~~~~~~~~~~~Couldn't find the folder of image and 3D model. {abs_path}~~~~~~~~~~~~~~~~~\n\
-                  ~~~~~~~~~~~~~~~~~~⛏Need to generate 3D model ⛏~~~~~~~~~~~~~~~~~")
+            bt.logging.info("~~~~~~~~~~~~~~~~~😵‍💫Couldn't find the folder of image and 3D model. {abs_path}😵‍💫~~~~~~~~~~~~~~~~~")
+            bt.logging.info("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~⛏Need to generate 3D model ⛏~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
             # extra_prompts = "Angled front view, solid color background, 3d model"
-            extra_prompts = "Angled front view, solid color background, high quality, detailed textures, realistic lighting, suitable for 3D rendering."
+            extra_prompts = "Angled front view, solid color background, 3d model, high quality"
+            # extra_prompts = "Angled front view, solid color background, high quality, detailed textures, realistic lighting, suitable for 3D rendering."
             enhanced_prompt = f"{prompt}, {extra_prompts}"
+
+            # Image Generation config
             image_endpoint = "http://127.0.0.1:8095"
             image_url = urllib.parse.urljoin(image_endpoint, "/image_generation/")
             bt.logging.info(f"Image generation endpoint: {image_url}")
@@ -131,12 +134,11 @@ async def _generate(self, synapse: bt.Synapse) -> bt.Synapse:
             set_status(self)
             if not result or not result.get('success'):
                 bt.logging.warning("Not able to generate 3D models due to unkown issues")
-                with open("../../bad_prompts.txt", "a") as file:
+                with open("/workspace/bad_prompts.txt", "a") as file:
                     file.write(f"{prompt}\n")
                     
                 return synapse
 
-            abs_path = result['path']
             text_file_path = os.path.join(abs_path, 'prompt.txt')
             # Save the line in the text file
             with open(text_file_path, 'w') as text_file:
@@ -178,8 +180,6 @@ async def _generate(self, synapse: bt.Synapse) -> bt.Synapse:
         except Exception as e:
             bt.logging.error(f"Error reading files: {e}")
         
-        if time.time() - start <  2:
-            time.sleep(10)
     return synapse
 
 async def generate_image_from_text(gen_url: str, timeout: int, prompt: str, output_dir: str):
