@@ -111,13 +111,9 @@ async def _generate(self, synapse: bt.Synapse) -> bt.Synapse:
         abs_path = os.path.join('/workspace/DB', hash_folder_name)
         if not os.path.exists(abs_path):
             # set_status(self, "generation")
-            bt.logging.info("~~~~~~~~~~~~~~~~~😵‍💫Couldn't find the folder of image and 3D model. {abs_path}😵‍💫~~~~~~~~~~~~~~~~~")
+            bt.logging.info(f"~~~~~~~~~~~~~~~~~😵‍💫Couldn't find the folder of image and 3D model. {abs_path}😵‍💫~~~~~~~~~~~~~~~~~")
             bt.logging.info("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~⛏Need to generate 3D model ⛏~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
-            # extra_prompts = "Angled front view, solid color background, 3d model"
-            extra_prompts = "Angled front view, solid color background, 3d model, high quality"
-            # extra_prompts = "Angled front view, solid color background, high quality, detailed textures, realistic lighting, suitable for 3D rendering."
-            enhanced_prompt = f"{prompt}, {extra_prompts}"
-
+            
             # Image Generation config
             image_endpoint = "http://127.0.0.1:8095"
             image_url = urllib.parse.urljoin(image_endpoint, "/text2image/")
@@ -137,12 +133,13 @@ async def _generate(self, synapse: bt.Synapse) -> bt.Synapse:
             for extra_prompt in Extra_prompts:
                 enhanced_prompt = f"{prompt}, {extra_prompt}"
                 bt.logging.info(enhanced_prompt)
-                result = await generate_image_from_text(gen_url=image_url, timeout=image_generation_timeout, prompt=enhanced_prompt, output_dir = abs_path)    
+                result = await generate_image_from_text(gen_url=image_url, timeout=image_generation_timeout, prompt=enhanced_prompt, output_dir=abs_path)    
+                
                 validation_url = urllib.parse.urljoin("http://127.0.0.1:8094", "/image_validation/")
                 validation_timeout = 40
                 try:
-                    result = await validate(validation_url=validation_url, timeout=validation_timeout, prompt=prompt, DATA_DIR=abs_path)
-                    S0 = result
+                    score = await validate(validation_url=validation_url, timeout=validation_timeout, prompt=prompt, DATA_DIR=abs_path)
+                    S0 = score
                     print("----------validation is ended-----------")
                     if S0 > 0.23:
                         flag = True
@@ -162,7 +159,7 @@ async def _generate(self, synapse: bt.Synapse) -> bt.Synapse:
             
             url = urllib.parse.urljoin(self.config.generation.endpoint, "/juggernautxl_to_3d/")
             bt.logging.info(f"3D model generation endpoint: {url}")
-            result = await generate_from_image(gen_url=url, timeout=170, output_dir = abs_path)
+            result = await generate_from_image(gen_url=url, timeout=170, output_dir=abs_path)
             set_status(self)
             if not result or not result.get('success'):
                 bt.logging.warning("Not able to generate 3D models due to unkown issues")
@@ -292,7 +289,7 @@ async def generate_from_image(gen_url: str, timeout: int, output_dir: str):
             bt.logging.debug(f"=================================================")
             client_timeout = aiohttp.ClientTimeout(total=float(timeout))
             
-            async with session.post(gen_url, timeout=client_timeout, data={"output_dir": output_dir}) as response:
+            async with session.post(gen_url, timeout=client_timeout, json={"output_dir": output_dir}) as response:
                 if response.status == 200:
                     result = await response.json()
                     print("Success:", result)
