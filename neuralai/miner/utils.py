@@ -169,7 +169,7 @@ async def _generate(self, synapse: bt.Synapse) -> bt.Synapse:
             bt.logging.error(f"Error reading files: {e}")
         
         if time.time() - start <  2:
-            time.sleep(10)
+            time.sleep(1)
     return synapse
 
 async def _generate_from_text(gen_url: str, timeout: int, prompt: str):

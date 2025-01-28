@@ -47,7 +47,7 @@ class Miner(BaseMinerNeuron):
 
         start = time.time()
         miner_id = self.config.miner_id if self.config.miner_id < 10 else 9
-        time.sleep(miner_id*0.3)
+        time.sleep(miner_id*0.1)
 
         
         bt.logging.info(f"====== Received a task. Validator uid : {uid}, hotkey : {synapse.dendrite.hotkey} ======")
@@ -83,8 +83,8 @@ class Miner(BaseMinerNeuron):
                     synapse.out_glb = base64.b64encode(read_file(paths["glb"])).decode('utf-8')
                     synapse.s3_addr = []            
                     bt.logging.info("Valid result")
-                    if time.time() - start <  2:
-                        time.sleep(10)
+                    # if time.time() - start <  2:
+                    #     time.sleep(10)
                     self.generation_requests -= 1
                     if self.generation_requests < self.config.miner.concurrent_limit:
                         set_status(self)
