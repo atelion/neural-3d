@@ -122,7 +122,6 @@ async def _generate(self, synapse: bt.Synapse) -> bt.Synapse:
             
             Extra_prompts = [
                 "solid color background, 3D model"
-                "",
                 "Angled front view, solid color background, 3d model, high quality",
                 "Angled front view, solid color background, detailed sub-components, suitable for 3D rendering, include relevant complementary objects (e.g., a stand for the clock, a decorative base for the sword) linked to the main object to create context and depth.",
             ]

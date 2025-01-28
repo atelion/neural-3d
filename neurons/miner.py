@@ -74,7 +74,7 @@ class Miner(BaseMinerNeuron):
                 flag_wait_for_70 = False
                 if synapse.prompt_text == prompt_on_process and not os.path.isfile(os.path.join(abs_path, 'mesh.glb')) :
                     flag_wait_for_70 = True
-                    time.sleep(70)
+                    time.sleep(74)
                 
                 paths = {
                     "prev": os.path.join(abs_path, 'img.jpg'),
