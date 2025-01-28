@@ -1756,3 +1756,4 @@
 167-wasteland sniper nest with camouflage netting and ammo boxes
 1-mystical lantern with flickering flames and stained glass panels
 27-rusted medieval chest with iron bands and broken lock
+167-military grade power armor with battle damage and energy cores

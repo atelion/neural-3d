@@ -1405,3 +1405,5 @@
 152-cyberpunk vending machine with neon displays and chrome panels
 1-alien energy pistol with pulsing lights and sleek chrome finish
 152-neo-japanese street lantern with holographic kanji and rain effects
+1-ornate steampunk revolver with brass engravings and mahogany grip
+70-combat drone with carbon-fiber wings and missile racks
